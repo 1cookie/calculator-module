@@ -18,4 +18,23 @@ class CalculatorTest extends TestCase
         $this->assertEquals(0, $result['extra_person_price']);
         $this->assertEquals(90, $result['total_price']);
     }
+
+    public function test_truck_calculator_calculates_correctly()
+    {
+        $response = $this->postJson('/api/calculate-cost', [
+            'distances' => [55, 13, 22],
+            'extra_person' => true,
+            'vehicle_type' => 'truck',
+        ]);
+
+        $response->assertStatus(200);
+
+        $response->assertJson([
+            'drop_off_count' => 3,
+            'total_distance' => 90,
+            'cost_per_mile' => 2.00,
+            'extra_person_price' => 30,
+            'total_price' => 210,
+        ]);
+    }
 }
