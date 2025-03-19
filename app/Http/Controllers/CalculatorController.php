@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Modules\Calculator\Contracts\CalculatorInterface;
 use App\Modules\Calculator\Services\VanDeliveryCalculator;
 use App\Modules\Calculator\Services\TruckDeliveryCalculator;
 
