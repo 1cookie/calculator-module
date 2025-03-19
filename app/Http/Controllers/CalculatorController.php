@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Modules\Calculator\Contracts\CalculatorInterface;
 use App\Modules\Calculator\Services\VanDeliveryCalculator;
+use App\Modules\Calculator\Services\TruckDeliveryCalculator;
 
 class CalculatorController extends Controller
 {
@@ -14,12 +15,14 @@ class CalculatorController extends Controller
             'distances' => 'required|array|min:1|max:5',
             'distances.*' => 'numeric|min:0',
             'extra_person' => 'boolean',
-            'vehicle_type' => 'required|string|in:van'
+            'vehicle_type' => 'required|string|in:van,truck'
         ]);
 
-        $calculator = new VanDeliveryCalculator();
-        $result = $calculator->calculate($validated['distances'], $validated['extra_person'] ?? false);
+        $calculator = match ($validated['vehicle_type']) {
+            'truck' => new TruckDeliveryCalculator(),
+            default => new VanDeliveryCalculator(),
+        };
 
-        return response()->json($result);
+        return response()->json($calculator->calculate($validated['distances'], $validated['extra_person'] ?? false));
     }
 }
