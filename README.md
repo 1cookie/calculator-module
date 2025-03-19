@@ -1,66 +1,160 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+# Delivery Cost Calculator API
 
-## About Laravel
+This project provides a simple API for calculating delivery costs based on the type of vehicle (Van or Truck), the distances of the deliveries, and whether an extra person is needed for assistance.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Endpoints
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### POST `/api/calculate-cost`
+This endpoint calculates the total cost of a delivery based on the input parameters:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+#### Request Body
 
-## Learning Laravel
+```json
+{
+    "distances": [55, 13, 22],
+    "extra_person": true,
+    "vehicle_type": "truck"
+}
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- `distances`: An array of integers representing the distances to be covered (between 1 and 5 distances).
+- `extra_person`: A boolean flag indicating if an extra person is required (defaults to `false`).
+- `vehicle_type`: A string that specifies the vehicle type. It can be either `van` or `truck`.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+#### Response
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+The response will be a JSON object containing the calculated delivery details:
 
-## Laravel Sponsors
+```json
+{
+    "drop_off_count": 3,
+    "total_distance": 90,
+    "cost_per_mile": 2.00,
+    "extra_person_price": 30,
+    "total_price": 210
+}
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- `drop_off_count`: The number of drop-off points (equal to the number of distances provided).
+- `total_distance`: The total distance to be covered (sum of all distances).
+- `cost_per_mile`: The cost per mile based on the vehicle type.
+- `extra_person_price`: The price for an extra person (if applicable).
+- `total_price`: The total cost of the delivery.
 
-### Premium Partners
+## Routes
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+In the `routes/api.php` file, the route to handle the delivery calculation is defined as follows:
 
-## Contributing
+```php
+Route::post('/calculate-cost', [CalculatorController::class, 'calculate']);
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+The controller that handles the calculation logic is `CalculatorController`.
 
-## Code of Conduct
+## Controllers
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### CalculatorController
 
-## Security Vulnerabilities
+This controller receives the POST request, validates the input, and calculates the delivery cost using either the `VanDeliveryCalculator` or the `TruckDeliveryCalculator` class based on the provided `vehicle_type`.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```php
+class CalculatorController extends Controller
+{
+    public function calculate(Request $request)
+    {
+        $validated = $request->validate([
+            'distances' => 'required|array|min:1|max:5',
+            'distances.*' => 'numeric|min:0',
+            'extra_person' => 'boolean',
+            'vehicle_type' => 'required|string|in:van,truck'
+        ]);
+
+        $calculator = match ($validated['vehicle_type']) {
+            'truck' => new TruckDeliveryCalculator(),
+            default => new VanDeliveryCalculator(),
+        };
+
+        return response()->json($calculator->calculate($validated['distances'], $validated['extra_person'] ?? false));
+    }
+}
+```
+
+## Testing
+
+There are unit and feature tests included in the project to verify the correct behavior of the calculator.
+
+### Unit Tests
+
+The unit test for the `VanDeliveryCalculator` ensures that the business logic is correctly calculating the delivery cost.
+
+To run the unit test:
+
+```bash
+php artisan test --filter CalculatorApiTest
+```
+
+### Feature Tests
+
+The feature tests simulate HTTP requests and test the full integration of the API endpoint.
+
+To run the feature test:
+
+```bash
+php artisan test --filter CalculatorTest
+```
+
+## cURL Examples
+
+You can test the API using `cURL` by sending POST requests to the `/api/calculate-cost` endpoint.
+
+### Example 1: Van Delivery
+
+```bash
+curl -X POST https://www.deliveryapp.com/api/calculate-cost      -H "Content-Type: application/json"      -d '{
+         "distances": [55, 13, 22],
+         "extra_person": false,
+         "vehicle_type": "van"
+     }'
+```
+
+### Example 2: Truck Delivery
+
+```bash
+curl -X POST https://www.deliveryapp.com/api/calculate-cost      -H "Content-Type: application/json"      -d '{
+         "distances": [55, 13, 22],
+         "extra_person": true,
+         "vehicle_type": "truck"
+     }'
+```
+
+## Installation
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/1cookie/calculator-module
+cd calculator-module
+```
+
+2. Install dependencies:
+
+```bash
+composer install
+```
+
+3. Set up your `.env` file and run the migrations (if applicable):
+
+```bash
+php artisan migrate
+```
+
+4. Start the development server:
+
+```bash
+php artisan serve
+```
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
