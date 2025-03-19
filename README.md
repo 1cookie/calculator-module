@@ -143,11 +143,7 @@ cd calculator-module
 composer install
 ```
 
-3. Set up your `.env` file and run the migrations (if applicable):
-
-```bash
-php artisan migrate
-```
+3. Set up your `.env` file
 
 4. Start the development server:
 
